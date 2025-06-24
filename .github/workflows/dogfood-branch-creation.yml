@@ -114,7 +114,7 @@ jobs:
                   ref: prHead
                 });
 
-                for (const run in checkRuns.check_runs) {
+                for (const run of checkRuns.check_runs) {
                   console.log(`${run.status} ${run.conclusion}`);
                 }
                 
