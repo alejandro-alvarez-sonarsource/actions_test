@@ -5,7 +5,10 @@ on:
     workflows: [Build]
     types:
       - completed
-
+    branches-ignore:
+      - main
+      - 'dogfood/**'
+      
 jobs:
   dogfood_check:
     runs-on: ubuntu-latest
