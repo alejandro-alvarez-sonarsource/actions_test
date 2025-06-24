@@ -13,6 +13,7 @@ jobs:
   dogfood_check:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Extract PR and create dogfood branch
         uses: actions/github-script@v7
         with:
