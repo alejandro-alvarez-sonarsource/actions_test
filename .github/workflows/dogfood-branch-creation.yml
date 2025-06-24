@@ -102,7 +102,25 @@ jobs:
                   ref: prHead
                 });
                 
-                const checksGreen = status.state === 'success';
+                // Also get all check runs
+                const { data: checkRuns } = await github.rest.checks.listForRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: prHead
+                });
+                
+                // Filter out this workflow from consideration
+                const relevantCheckRuns = checkRuns.check_runs.filter(
+                  check => check.name !== 'PR Green Checker' && 
+                          check.name !== 'dogfood_check'
+                );
+                
+                const allChecksSuccessful = relevantCheckRuns.every(
+                  check => check.status === 'completed' && check.conclusion === 'success'
+                );
+                
+                // Consider the PR green if both statuses and filtered check runs are successful
+                const checksGreen = status.state === 'success' && allChecksSuccessful;
                 console.log(`Checks are ${checksGreen ? 'green' : 'not green'} for PR #${prNumber}`);
                 
                 // Only create the dogfood branch if all checks are green
