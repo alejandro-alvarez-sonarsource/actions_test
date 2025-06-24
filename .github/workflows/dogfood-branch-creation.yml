@@ -3,7 +3,8 @@ name: PR Green Checker
 on:
   workflow_run:
     workflows: ["C++ CI"]
-    types: [completed]
+    types:
+      - completed
 
 jobs:
   check_pr_status:
