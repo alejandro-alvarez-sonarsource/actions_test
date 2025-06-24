@@ -5,6 +5,8 @@ on:
     workflows: ["C++ CI"]
     types:
       - completed
+  push:
+    branches: [ main ]
 
 jobs:
   check_pr_status:
