@@ -8,7 +8,7 @@ on:
     branches-ignore:
       - main
       - 'dogfood/**'
-      
+
 jobs:
   dogfood_check:
     runs-on: ubuntu-latest
@@ -104,6 +104,8 @@ jobs:
                   repo: context.repo.repo,
                   ref: prHead
                 });
+
+                console.log(`Combined status is ${status.state}`);
                 
                 // Also get all check runs
                 const { data: checkRuns } = await github.rest.checks.listForRef({
@@ -111,14 +113,12 @@ jobs:
                   repo: context.repo.repo,
                   ref: prHead
                 });
+
+                for (const run in checkRuns) {
+                  console.log(`${run.status} ${run.conclusion}`);
+                }
                 
-                // Filter out this workflow from consideration
-                const relevantCheckRuns = checkRuns.check_runs.filter(
-                  check => check.name !== 'PR Green Checker' && 
-                          check.name !== 'dogfood_check'
-                );
-                
-                const allChecksSuccessful = relevantCheckRuns.every(
+                const allChecksSuccessful = checkRuns.every(
                   check => check.status === 'completed' && check.conclusion === 'success'
                 );
                 
