@@ -114,11 +114,11 @@ jobs:
                   ref: prHead
                 });
 
-                for (const run in checkRuns) {
+                for (const run in checkRuns.check_runs) {
                   console.log(`${run.status} ${run.conclusion}`);
                 }
                 
-                const allChecksSuccessful = checkRuns.every(
+                const allChecksSuccessful = checkRuns.check_runs.every(
                   check => check.status === 'completed' && check.conclusion === 'success'
                 );
                 
