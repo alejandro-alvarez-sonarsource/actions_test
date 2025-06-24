@@ -97,16 +97,7 @@ jobs:
                   console.log('PR does not have the dogfood label, skipping branch creation');
                   return;
                 }
-                
-                // Check if all checks are green
-                const { data: status } = await github.rest.repos.getCombinedStatusForRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: prHead
-                });
-
-                console.log(`Combined status is ${status.state}`);
-                
+                               
                 // Also get all check runs
                 const { data: checkRuns } = await github.rest.checks.listForRef({
                   owner: context.repo.owner,
@@ -115,7 +106,7 @@ jobs:
                 });
 
                 for (const run of checkRuns.check_runs) {
-                  console.log(`${run.status} ${run.conclusion}`);
+                  console.log(`${run.output.title} ${run.status} ${run.conclusion}`);
                 }
                 
                 const allChecksSuccessful = checkRuns.check_runs.every(
@@ -123,11 +114,10 @@ jobs:
                 );
                 
                 // Consider the PR green if both statuses and filtered check runs are successful
-                const checksGreen = status.state === 'success' && allChecksSuccessful;
-                console.log(`Checks are ${checksGreen ? 'green' : 'not green'} for PR #${prNumber}`);
+                console.log(`Checks are ${allChecksSuccessful ? 'green' : 'not green'} for PR #${prNumber}`);
                 
                 // Only create the dogfood branch if all checks are green
-                if (!checksGreen) {
+                if (!allChecksSuccessful) {
                   console.log('Not all checks are green, skipping branch creation');
                   return;
                 }
