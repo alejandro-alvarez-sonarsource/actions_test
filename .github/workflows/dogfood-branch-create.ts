@@ -1,4 +1,4 @@
-export default async ({ github, context }) => {
+module.exports = async ({ github, context, core }) => {
     // Get workflow run information
     const workflowRun = context.payload.workflow_run;
     console.log(`Processing workflow run #${workflowRun.id}`);
