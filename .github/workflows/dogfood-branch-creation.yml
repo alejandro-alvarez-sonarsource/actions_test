@@ -3,11 +3,12 @@ name: Create dogfood branch
 on:
   pull_request:
     types: [labeled]
-  status:
+  check_suite:
+    types: [completed]
 
 jobs:
   dogfood_check:
-    runs-on: sonar-runner
+    runs-on: ubuntu-latest
     steps:
       - name: Get PR info from check_suite
         if: github.event_name == 'status'
@@ -53,7 +54,7 @@ jobs:
               core.setOutput('skip', 'true');
               return;
             }
-            const pr = await github.pulls.get({
+            const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: pr_number
