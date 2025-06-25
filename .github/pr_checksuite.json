@@ -1,7 +1,0 @@
-{
-    "action": "completed",
-    "check_suite": {
-        "head_branch": "my/feature",
-        "head_sha": "e80783e597ee9b8c3ea933bea3e9366745da64c6"
-    }
-}
