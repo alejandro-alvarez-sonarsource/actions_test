@@ -1,7 +1,7 @@
 {
     "action": "completed",
     "check_suite": {
-        "head_branch": "my/feature",
-        "head_sha": "e80783e597ee9b8c3ea933bea3e9366745da64c6"
+        "head_branch": "aa/better",
+        "head_sha": "a4d86d1404e021db220c1ad2f835c4768f18a159"
     }
 }

@@ -22,23 +22,25 @@ function extractPRInfoFromLabeledPR(context) {
  * @returns {Promise<{prNumber: number|null, prHead: string, branchName: string|null}>} PR information including number, head commit SHA, and branch name
  */
 async function getPRInfoFromCommit(github, context, commitSha) {
+    console.log(`Get PR info for ${commitSha}`);
     let prNumber = null;
     let branchName = null;
-    const associatedPrs = await github.rest.pulls.list({
+
+    // First get all open PRs in the repository
+    const allOpenPrs = await github.rest.pulls.list({
         owner: context.repo.owner,
         repo: context.repo.repo,
         state: 'open',
-        head_sha: commitSha
     });
-    if (associatedPrs && associatedPrs.data && associatedPrs.data.length > 0) {
-        prNumber = associatedPrs.data[0].number;
-        const pr = await github.rest.pulls.get({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: prNumber
-        });
-        branchName = pr.data.head.ref;
+
+    // Then find the first PR that has the given commit as HEAD
+    const matchingPr = allOpenPrs.data.find(pr => pr.head.sha === commitSha);
+
+    if (matchingPr) {
+        prNumber = matchingPr.number;
+        branchName = matchingPr.head.ref;
     }
+
     return {
         prNumber,
         prHead: commitSha,
