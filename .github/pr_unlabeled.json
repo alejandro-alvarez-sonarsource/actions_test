@@ -1,0 +1,34 @@
+{
+    "action": "unlabeled",
+    "label": {
+        "name": "dogfood"
+    },
+    "pull_request": {
+        "number": 42,
+        "state": "open",
+        "title": "Update feature X",
+        "user": {
+            "login": "octocat"
+        },
+        "head": {
+            "ref": "aa/my_feature"
+        },
+        "base": {
+            "ref": "main"
+        },
+        "labels": [
+            {
+                "name": "bug"
+            },
+            {
+                "name": "enhancement"
+            }
+        ]
+    },
+    "repository": {
+        "full_name": "octocat/Hello-World"
+    },
+    "sender": {
+        "login": "octocat"
+    }
+}

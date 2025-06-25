@@ -1,0 +1,18 @@
+{
+    "name": "github-actions",
+    "context": "continuous-integration/github-actions",
+    "state": "success",
+    "description": "The workflow completed successfully",
+    "target_url": "https://github.com/owner/repo/actions/runs/12345",
+    "repository": {
+        "full_name": "owner/repo"
+    },
+    "commit": {
+        "sha": "a5d5261713d71f9216cf5ecd284f3ec8a7c89dc0"
+    },
+    "branches": [
+        {
+            "name": "aa/my_feature"
+        }
+    ]
+}
