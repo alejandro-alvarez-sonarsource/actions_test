@@ -75,6 +75,8 @@ module.exports = async ({ github, context, core }) => {
         // Only proceed if this PR has the dogfood label
         if (!hasDogfoodLabel) {
             console.log('PR does not have the dogfood label, skipping branch creation');
+            core.setOutput('result', 'skipped');
+            core.setFailed('skipped: no dogfood label');
             return;
         }
 
@@ -86,7 +88,7 @@ module.exports = async ({ github, context, core }) => {
         });
 
         for (const run of checkRuns.check_runs) {
-            console.log(`${run.output.title} ${run.status} ${run.conclusion}`);
+            console.log(`Check run details:`, JSON.stringify(run, null, 2));
         }
 
         const allChecksSuccessful = checkRuns.check_runs.every(

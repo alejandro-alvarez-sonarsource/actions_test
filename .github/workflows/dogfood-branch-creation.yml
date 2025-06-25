@@ -20,4 +20,4 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const script = require('./.github/workflows/dogfood-branch-create.ts')
-            await script({github, context})
+            await script({github, context, core})
