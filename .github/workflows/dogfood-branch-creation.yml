@@ -1,4 +1,4 @@
-name: PR Green Checker
+name: Dogfood Branch Creation
 
 on:
   workflow_run:

@@ -1,0 +1,35 @@
+name: Dogfood Branch Deletion
+
+on:
+  pull_request:
+    types:
+      - unlabeled
+
+jobs:
+  delete_dogfood_branch:
+    if: |
+      github.event.label.name == 'dogfood'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete dogfood branch
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const sourceBranch = pr.head.ref;
+            const dogfoodBranch = `dogfood/${sourceBranch}`;
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${dogfoodBranch}`
+              });
+              console.log(`Deleted branch: ${dogfoodBranch}`);
+            } catch (error) {
+              if (error.status === 422) {
+                console.log(`Branch ${dogfoodBranch} does not exist.`);
+              } else {
+                throw error;
+              }
+            }
