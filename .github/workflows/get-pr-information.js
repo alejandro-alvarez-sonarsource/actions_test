@@ -48,7 +48,7 @@ async function extractPRInfoFromCheckSuite(github, context) {
     return await getPRInfoFromCommit(github, context, checkSuite.head_sha);
 }
 
-async function getCommitStatus(github, context, prHead) {
+async function getCommitStatus(github, context, prHead, excludeJob) {
     console.log(`Obtaining status for ${prHead}`);
     const { data: checkRuns } = await github.rest.checks.listForRef({
         owner: context.repo.owner,
@@ -61,7 +61,7 @@ async function getCommitStatus(github, context, prHead) {
     }
 
     const filteredCheckRuns = checkRuns.check_runs.filter(
-        check => check.name !== 'get_pr_information'
+        check => check.name !== excludeJob
     );
     if (!filteredCheckRuns || filteredCheckRuns.length === 0) {
         return 'pending';
@@ -77,7 +77,17 @@ async function getCommitStatus(github, context, prHead) {
     return 'pending';
 }
 
-module.exports = async ({ github, context, core }) => {
+async function getPRLabels(github, context, prNumber) {
+    if (!prNumber) return [];
+    const { data: pr } = await github.rest.pulls.get({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: prNumber
+    });
+    return pr.labels ? pr.labels.map(label => label.name) : [];
+}
+
+module.exports = async function (github, context, core, excludeJob) {
     let prInfo = { prNumber: null, prHead: null, branchName: null };
     if (context.eventName === 'pull_request' && context.payload.action === 'labeled') {
         prInfo = extractPRInfoFromLabeledPR(context);
@@ -88,9 +98,11 @@ module.exports = async ({ github, context, core }) => {
     } else {
         prInfo = { prNumber: '', prHead: '', branchName: '' }
     }
-    const prStatus = await getCommitStatus(github, context, prInfo.prHead);
+    const prStatus = await getCommitStatus(github, context, prInfo.prHead, excludeJob);
+    const prLabels = prInfo.prNumber ? await getPRLabels(github, context, prInfo.prNumber) : [];
     core.setOutput('prNumber', prInfo.prNumber);
     core.setOutput('prHead', prInfo.prHead);
-    core.setOutput('branchName', prInfo.branchName);
+    core.setOutput('prBranchName', prInfo.branchName);
     core.setOutput('prStatus', prStatus);
+    core.setOutput('prLabels', prLabels);
 };

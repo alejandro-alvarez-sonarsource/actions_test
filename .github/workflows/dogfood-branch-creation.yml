@@ -14,14 +14,25 @@ on:
     types: [completed]
 
 jobs:
-  get_pr_information:
+  create_dogfood_branch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Extract PR information
+        id: extract_pr_information
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const script = require('./.github/workflows/get-pr-information.js')
-            await script({github, context, core})
+            await script(github, context, core, "create_dogfood_branch")
+      - name: Create dogfood branch
+        if: steps.extract_pr_information.outputs.prStatus == 'success' && contains(steps.extract_pr_information.outputs.prLabels, 'dogfood')
+        env:
+          PR_BRANCH_NAME: ${{ steps.extract_pr_information.outputs.prBranchName }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout $PR_BRANCH_NAME
+          git branch -f dogfood/$PR_BRANCH_NAME
+          git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/${{ github.repository }}.git
+          git push origin dogfood/$PR_BRANCH_NAME --force
