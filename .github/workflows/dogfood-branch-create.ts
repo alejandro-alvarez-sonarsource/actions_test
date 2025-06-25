@@ -75,8 +75,7 @@ module.exports = async ({ github, context, core }) => {
         // Only proceed if this PR has the dogfood label
         if (!hasDogfoodLabel) {
             console.log('PR does not have the dogfood label, skipping branch creation');
-            core.setOutput('result', 'skipped');
-            core.setFailed('skipped: no dogfood label');
+            core.notice('skipped: no dogfood label');
             return;
         }
 
