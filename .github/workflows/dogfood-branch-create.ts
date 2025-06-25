@@ -1,0 +1,152 @@
+module.exports = async ({ github, context, core }) => {
+    // Get workflow run information
+    const workflowRun = context.payload.workflow_run;
+    console.log(`Processing workflow run #${workflowRun.id}`);
+
+    // Extract the head SHA from the workflow run
+    const headSha = workflowRun.head_sha;
+    if (!headSha) {
+        console.log('No head SHA found in workflow run');
+        return;
+    }
+
+    console.log(`Workflow head SHA: ${headSha}`);
+
+    // Approach 1: If this workflow run was triggered by a pull request
+    let prNumber = null;
+    let prHead = null;
+    let branchName = null;
+    let hasDogfoodLabel = false;
+
+    if (workflowRun.event === 'pull_request') {
+        console.log('Workflow was triggered by a pull request');
+
+        // Find open PRs by head SHA
+        const { data: prs } = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            head_sha: headSha
+        });
+
+        if (prs && prs.length > 0) {
+            const pr = prs[0];
+            prNumber = pr.number;
+            console.log(`Found PR #${prNumber} from workflow run`);
+        }
+    }
+
+    // Approach 2: Find PRs associated with the head commit (fallback)
+    if (!prNumber) {
+        console.log(`Looking for PRs associated with commit: ${headSha}`);
+
+        const { data: associatedPRs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            commit_sha: headSha
+        });
+
+        if (associatedPRs && associatedPRs.length > 0) {
+            prNumber = associatedPRs[0].number;
+            console.log(`Found PR #${prNumber} associated with commit`);
+        } else {
+            console.log('No PRs found for this workflow run');
+            return;
+        }
+    }
+
+    // Now get the full PR details
+    if (prNumber) {
+        const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: prNumber
+        });
+
+        prHead = pr.head.sha;
+        branchName = pr.head.ref;
+        hasDogfoodLabel = pr.labels.some(label => label.name === 'dogfood');
+
+        console.log(`PR #${prNumber} details:`);
+        console.log(`- Head SHA: ${prHead}`);
+        console.log(`- Branch: ${branchName}`);
+        console.log(`- Has dogfood label: ${hasDogfoodLabel}`);
+
+        // Only proceed if this PR has the dogfood label
+        if (!hasDogfoodLabel) {
+            console.log('PR does not have the dogfood label, skipping branch creation');
+            core.setOutput('result', 'skipped');
+            core.setFailed('skipped: no dogfood label');
+            return;
+        }
+
+        // Also get all check runs
+        const { data: checkRuns } = await github.rest.checks.listForRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: prHead
+        });
+
+        for (const run of checkRuns.check_runs) {
+            console.log(`Check run details:`, JSON.stringify(run, null, 2));
+        }
+
+        const allChecksSuccessful = checkRuns.check_runs.every(
+            check => check.status === 'completed' && check.conclusion === 'success'
+        );
+
+        // Consider the PR green if both statuses and filtered check runs are successful
+        console.log(`Checks are ${allChecksSuccessful ? 'green' : 'not green'} for PR #${prNumber}`);
+
+        // Only create the dogfood branch if all checks are green
+        if (!allChecksSuccessful) {
+            console.log('Not all checks are green, skipping branch creation');
+            return;
+        }
+
+        // Create and push the dogfood branch
+        // First checkout the code
+        const { data: repoData } = await github.rest.repos.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo
+        });
+
+        // Since we can't directly use git commands in github-script,
+        // we'll use the GitHub API to create the branch
+        const dogfoodBranchName = `dogfood/${branchName}`;
+
+        try {
+            // Check if the branch already exists (will throw if it doesn't)
+            await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${dogfoodBranchName}`
+            });
+
+            // Update branch to point at the new commit
+            await github.rest.git.updateRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${dogfoodBranchName}`,
+                sha: prHead,
+                force: true
+            });
+            console.log(`Updated existing branch: ${dogfoodBranchName}`);
+        } catch (error) {
+            if (error.status === 404) {
+                // Branch doesn't exist, create it
+                await github.rest.git.createRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: `refs/heads/${dogfoodBranchName}`,
+                    sha: prHead
+                });
+                console.log(`Created new branch: ${dogfoodBranchName}`);
+            } else {
+                throw error;
+            }
+        }
+
+        console.log(`Successfully created/updated dogfood branch for PR #${prNumber}`);
+    }
+}

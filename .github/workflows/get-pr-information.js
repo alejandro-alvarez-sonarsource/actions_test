@@ -1,4 +1,6 @@
 function extractPRInfoFromLabeledPR(context) {
+    console.log("Labeled PR event");
+
     const pr = context.payload.pull_request;
     return {
         prNumber: pr.number,
@@ -7,56 +9,72 @@ function extractPRInfoFromLabeledPR(context) {
     };
 }
 
-async function extractPRInfoFromWorkflowRun(github, context) {
-    const workflowRun = context.payload.workflow_run;
-    const prHead = workflowRun.head_sha;
+async function getPRInfoFromCommit(github, context, commitSha) {
     let prNumber = null;
     let branchName = null;
-    if (workflowRun.event === 'pull_request') {
-        const associatedPrs = await github.rest.pulls.list({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            state: 'open',
-            head_sha: prHead
-        });
-        if (associatedPrs && associatedPrs.length > 0) {
-            prNumber = associatedPrs[0].number;
-        }
-    }
-    if (prNumber) {
+    const associatedPrs = await github.rest.pulls.list({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        state: 'open',
+        head_sha: commitSha
+    });
+    if (associatedPrs && associatedPrs.data && associatedPrs.data.length > 0) {
+        prNumber = associatedPrs.data[0].number;
         const pr = await github.rest.pulls.get({
             owner: context.repo.owner,
             repo: context.repo.repo,
             pull_number: prNumber
         });
-        branchName = pr.head.ref;
+        branchName = pr.data.head.ref;
     }
     return {
         prNumber,
-        prHead,
+        prHead: commitSha,
         branchName
     };
 }
 
+async function extractPRInfoFromWorkflowRun(github, context) {
+    console.log("Extracting PR information from workflow_run event");
+
+    const workflowRun = context.payload.workflow_run;
+    return await getPRInfoFromCommit(github, context, workflowRun.head_sha);
+}
+
 async function extractPRInfoFromCheckSuite(github, context) {
+    console.log("Extracting PR information from check_suite event");
+
     const checkSuite = context.payload.check_suite;
-    const prHead = checkSuite.head_sha;
-    let prNumber = null;
-    let branchName = null;
-    if (checkSuite.pull_requests && checkSuite.pull_requests.length > 0) {
-        prNumber = checkSuite.pull_requests[0].number;
-        const pr = await github.rest.pulls.get({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: prNumber
-        });
-        branchName = pr.head.ref;
+    return await getPRInfoFromCommit(github, context, checkSuite.head_sha);
+}
+
+async function getCommitStatus(github, context, prHead) {
+    console.log(`Obtaining status for ${prHead}`);
+    const { data: checkRuns } = await github.rest.checks.listForRef({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        ref: prHead
+    });
+
+    for (const check of checkRuns.check_runs) {
+        console.log(`${check.name} ${check.status} ${check.conclusion}`)
     }
-    return {
-        prNumber,
-        prHead,
-        branchName
-    };
+
+    const filteredCheckRuns = checkRuns.check_runs.filter(
+        check => check.name !== 'get_pr_information'
+    );
+    if (!filteredCheckRuns || filteredCheckRuns.length === 0) {
+        return 'pending';
+    }
+    const allSuccess = filteredCheckRuns.every(
+        check => check.status === 'completed' && check.conclusion === 'success'
+    );
+    if (allSuccess) return 'success';
+    const anyFailed = filteredCheckRuns.some(
+        check => check.status === 'completed' && check.conclusion === 'failure'
+    );
+    if (anyFailed) return 'failure';
+    return 'pending';
 }
 
 module.exports = async ({ github, context, core }) => {
@@ -70,7 +88,9 @@ module.exports = async ({ github, context, core }) => {
     } else {
         prInfo = { prNumber: '', prHead: '', branchName: '' }
     }
+    const prStatus = await getCommitStatus(github, context, prInfo.prHead);
     core.setOutput('prNumber', prInfo.prNumber);
     core.setOutput('prHead', prInfo.prHead);
     core.setOutput('branchName', prInfo.branchName);
+    core.setOutput('prStatus', prStatus);
 };

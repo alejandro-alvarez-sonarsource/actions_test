@@ -1,0 +1,26 @@
+{
+    "action": "labeled",
+    "pull_request": {
+        "number": 1,
+        "title": "My PR",
+        "body": "This is a test PR",
+        "labels": [
+            {
+                "name": "my-label"
+            }
+        ],
+        "head": {
+            "sha": "e80783e597ee9b8c3ea933bea3e9366745da64c6",
+            "ref": "aa/my_feature"
+        }
+    },
+    "label": {
+        "name": "dogfood"
+    },
+    "repository": {
+        "full_name": "alejandro-alvarez-sonarsource/actions_test"
+    },
+    "sender": {
+        "login": "alejandro-alvarez-sonarsource"
+    }
+}
