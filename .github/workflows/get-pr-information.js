@@ -73,6 +73,19 @@ async function extractPRInfoFromCheckSuite(github, context) {
 }
 
 /**
+ * Extracts PR information from a status event
+ * @param {import('@actions/github').GitHub} github - GitHub API client provided by github-script
+ * @param {import('@actions/github').Context} context - GitHub Actions context object provided by github-script
+ * @returns {Promise<{prNumber: number|null, prHead: string, branchName: string|null}>} PR information including number, head commit SHA, and branch name
+ */
+async function extractPRInfoFromStatus(github, context) {
+    console.log("Extracting PR information from status event");
+
+    const commitSha = context.payload.commit?.sha || context.payload.sha;
+    return await getPRInfoFromCommit(github, context, commitSha);
+}
+
+/**
  * Gets the status of checks for a specific commit
  * @param {import('@actions/github').GitHub} github - GitHub API client provided by github-script
  * @param {import('@actions/github').Context} context - GitHub Actions context object provided by github-script
@@ -142,10 +155,13 @@ module.exports = async function (github, context, core, excludeJob) {
         prInfo = await extractPRInfoFromWorkflowRun(github, context);
     } else if (context.eventName === 'check_suite' && context.payload.action === 'completed') {
         prInfo = await extractPRInfoFromCheckSuite(github, context);
+    } else if (context.eventName === 'status') {
+        prInfo = await extractPRInfoFromStatus(github, context);
     } else {
         prInfo = { prNumber: null, prHead: null, branchName: null }
     }
     const prStatus = await getCommitStatus(github, context, prInfo.prHead, excludeJob);
+    console.log(`Status for ${prInfo.prHead}: ${prStatus}`);
     const prLabels = prInfo.prNumber ? await getPRLabels(github, context, prInfo.prNumber) : [];
     core.setOutput('prNumber', prInfo.prNumber);
     core.setOutput('prHead', prInfo.prHead);
