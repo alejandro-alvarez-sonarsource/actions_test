@@ -32,6 +32,8 @@ jobs:
           PR_BRANCH_NAME: ${{ steps.extract_pr_information.outputs.prBranchName }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git fetch origin $PR_BRANCH_NAME:$PR_BRANCH_NAME
+          git checkout $PR_BRANCH_NAME
           git branch -f dogfood/$PR_BRANCH_NAME
           git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/${{ github.repository }}.git
           git push origin dogfood/$PR_BRANCH_NAME --force
