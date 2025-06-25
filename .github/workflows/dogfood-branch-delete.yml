@@ -2,8 +2,7 @@ name: Dogfood Branch Deletion
 
 on:
   pull_request:
-    types:
-      - unlabeled
+    types: [unlabeled]
 
 jobs:
   delete_dogfood_branch:

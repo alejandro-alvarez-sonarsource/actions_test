@@ -8,6 +8,8 @@ on:
     branches-ignore:
       - main
       - 'dogfood/**'
+  pull_request:
+    types: [labeled]
 
 jobs:
   dogfood_check:
